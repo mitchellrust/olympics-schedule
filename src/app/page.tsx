@@ -1,95 +1,93 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import { Card, CardBody, CardTitle, CardSubtitle, CardText, Stack, Container, Navbar, NavbarBrand, ListGroup, ListGroupItem, Accordion, AccordionItem, AccordionHeader, AccordionBody } from "react-bootstrap";
 
-export default function Home() {
+export default async function Home() {
+
+  const curentDateTimeUTC = new Date();
+
+  //TODO: insert current date
+  const res = await fetch('https://sph-s-api.olympics.com/summer/schedules/api/ENG/schedule/day/2024-07-28')
+  // The return value is *not* serialized
+
+  let content: any;
+ 
+  if (!res.ok) {
+    content = <p>Could not fetch schedule, status [{res.statusText}]</p>
+  }
+  else
+  {
+    const data = await res.json();
+
+    content = data["units"].map(
+      (event: any) => {
+        if (event["competitors"].length < 1)
+        {
+          // Don't care about events with no competitors, some weird group stuff or something.
+          return null;
+        }
+        const startDateTimeUTC = new Date(event["startDate"]);
+        let startHour = startDateTimeUTC.getHours();
+        const startMinute = startDateTimeUTC.getMinutes();
+
+        const startTime = `${startHour % 12 === 0 ? 12 : startHour % 12}:${startMinute < 10 ? '0' : ''}${startMinute}`;
+
+        return (
+            <Card key={event["id"]}>
+              <CardBody>
+                <CardTitle>{`${event["disciplineName"]} - ${startTime}${startHour < 12 ? "am" : "pm"}`}</CardTitle>
+                <CardSubtitle>{event["eventUnitName"]}</CardSubtitle>
+                {
+                  event["competitors"].length > 2
+                  ? <Accordion>
+                      <AccordionItem eventKey="0">
+                        <AccordionHeader>Competitors</AccordionHeader>
+                        <AccordionBody>
+                          <ListGroup variant="flush">
+                              {
+                                event["competitors"].map((comp: any) => {
+                                  return (
+                                    <ListGroupItem key={comp["order"]}>{`${comp["noc"]} - ${comp["name"]}`}</ListGroupItem>
+                                  );
+                                })
+                              }
+                          </ListGroup>
+                        </AccordionBody>
+                      </AccordionItem>
+                    </Accordion>
+                  : <ListGroup variant="flush">
+                      {
+                        event["competitors"].map((comp: any) => {
+                          return (
+                            <ListGroupItem key={comp["order"]}>{`${comp["noc"]} - ${comp["name"]}`}</ListGroupItem>
+                          );
+                        })
+                      }
+                    </ListGroup>
+                }
+              </CardBody>
+            </Card>
+        );
+      }
+    );
+  }
+
+  // statusDescriptions
+  // Scheduled
+  // Running
+  // Finished
+  // Getting Ready
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+    <>
+    <Navbar bg="light" variant="light">
+                <Container>
+                    <NavbarBrand className="mx-auto">Schedule</NavbarBrand>
+                </Container>
+            </Navbar>
+      <Container>
+        <Stack gap={2} className="col-md-5 mx-auto">
+          { content }
+        </Stack>
+      </Container>
+    </>
   );
 }
