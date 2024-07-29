@@ -1,12 +1,15 @@
 'use client'
 
-import { useEffect, useState, Suspense } from "react";
-import { Card, CardBody, CardTitle, CardSubtitle, Stack, Container, Navbar, NavbarBrand, ListGroup, ListGroupItem, Accordion, AccordionItem, AccordionHeader, AccordionBody } from "react-bootstrap";
+import { useEffect, useState } from "react";
+import { Card, CardBody, CardTitle, CardSubtitle, Stack, Container, Navbar, NavbarBrand, ListGroup, ListGroupItem, Accordion, AccordionItem, AccordionHeader, AccordionBody, Badge, Col, Row, Button, DropdownButton, DropdownItem } from "react-bootstrap";
 import { fetchEventsAction } from "./actions";
 import { useSearchParams } from "next/navigation";
 
 export default function EventList() {
   const [events, setEvents] = useState<any[]>();
+  const [showScores, setShowScores] = useState(false);
+  const [filterUSA, setFilterUSA] = useState(false);
+  const [eventTypeFilter, setEventTypeFilter] = useState('');
 
   // See if id was passed in query params
   const queryParams = useSearchParams();
@@ -29,7 +32,18 @@ export default function EventList() {
     updateEvents()
   }, [currentDateStr]);
 
+  const toggleScores = () => {
+    console.log("toggling scores");
+    setShowScores(!showScores);
+  }
+
+  const toggleUSA = () => {
+    console.log("toggling USA filter");
+    setFilterUSA(!filterUSA);
+  }
+
   let content: any;
+  let eventTypes: string[] = [];
 
   if (events === undefined)
   {
@@ -48,16 +62,53 @@ export default function EventList() {
           // Don't care about events with no competitors, some weird group stuff or something.
           return null;
         }
+
+        // Apply filters
+        if (
+          filterUSA &&
+          event["competitors"].every((comp: any) => comp["noc"] !== "USA")
+        )
+        {
+          return null;
+        }
+        else if (eventTypeFilter !== "" && event["disciplineName"] !== eventTypeFilter)
+        {
+          return null
+        }
+
         const startDateTimeUTC = new Date(event["startDate"]);
         let startHour = startDateTimeUTC.getHours();
         const startMinute = startDateTimeUTC.getMinutes();
   
         const startTime = `${startHour % 12 === 0 ? 12 : startHour % 12}:${startMinute < 10 ? '0' : ''}${startMinute}`;
-  
+
+        const statusBadge = event["status"] == "SCHEDULED"
+          ? <Badge pill bg="primary" className="align-self-end">Upcoming</Badge>
+          : event["status"] == "GETTING_READY"
+            ? <Badge pill bg="success" className="align-self-end">Starting</Badge>
+            : event["status"] == "RUNNING"
+              ? <Badge pill bg="success" className="align-self-end">Live</Badge>
+              : event["status"] == "FINISHED"
+                ? <Badge pill bg="secondary" className="align-self-end">Finished</Badge>
+                : event["status"] == "RESCHEDULED"
+                  ? <Badge pill bg="warning" className="align-self-end">Rescheduled</Badge>
+                  : event["status"] == "CANCELLED"
+                    ? <Badge pill bg="danger" className="align-self-end">Cancelled</Badge>
+                    : <Badge pill bg="secondary" className="align-self-end">{event["status"]}</Badge>
+
         return (
             <Card key={event["id"]}>
               <CardBody>
-                <CardTitle>{`${event["disciplineName"]} - ${startTime}${startHour < 12 ? "am" : "pm"}`}</CardTitle>
+                <CardTitle>
+                  <Row>
+                    <Col>
+                      {`${event["disciplineName"]} - ${startTime}${startHour < 12 ? "am" : "pm"}`}
+                    </Col>
+                    <Col xs="auto">
+                      { statusBadge }
+                    </Col>
+                  </Row>
+                </CardTitle>
                 <CardSubtitle>{event["eventUnitName"]}</CardSubtitle>
                 {
                   event["competitors"].length > 2
@@ -68,8 +119,33 @@ export default function EventList() {
                           <ListGroup variant="flush">
                               {
                                 event["competitors"].map((comp: any) => {
+                                  let score: string | null = null;
+
+                                  if (
+                                    comp["results"] !== undefined &&
+                                    comp["results"] !== null
+                                  )
+                                  {
+                                    score = comp["results"]["position"] !== ""
+                                      ? comp["results"]["position"]
+                                      : comp["results"]["mark"];
+                                  }
+
                                   return (
-                                    <ListGroupItem key={comp["order"]}>{`${comp["noc"]} - ${comp["name"]}`}</ListGroupItem>
+                                    <ListGroupItem key={comp["order"]}>
+                                      <Row>
+                                        <Col>
+                                          {`${comp["noc"]} - ${comp["name"]}`}
+                                        </Col>
+                                        {
+                                          showScores
+                                          ? <Col xs="auto">
+                                              {score}
+                                            </Col>
+                                          : null
+                                        }
+                                      </Row>
+                                    </ListGroupItem>
                                   );
                                 })
                               }
@@ -80,8 +156,33 @@ export default function EventList() {
                   : <ListGroup variant="flush">
                       {
                         event["competitors"].map((comp: any) => {
+                          let score: string | null = null;
+
+                          if (
+                            comp["results"] !== undefined &&
+                            comp["results"] !== null
+                          )
+                          {
+                            score = comp["results"]["position"] !== ""
+                              ? comp["results"]["position"]
+                              : comp["results"]["mark"];
+                          }
+
                           return (
-                            <ListGroupItem key={comp["order"]}>{`${comp["noc"]} - ${comp["name"]}`}</ListGroupItem>
+                            <ListGroupItem key={comp["order"]}>
+                            <Row>
+                              <Col>
+                                {`${comp["noc"]} - ${comp["name"]}`}
+                              </Col>
+                              {
+                                showScores
+                                ? <Col xs="auto">
+                                    {score}
+                                  </Col>
+                                : null
+                              }
+                            </Row>
+                            </ListGroupItem>
                           );
                         })
                       }
@@ -92,26 +193,35 @@ export default function EventList() {
         );
       }
     );
-  }
 
-  // statusDescriptions
-  // Scheduled
-  // Running
-  // Finished
-  // Getting Ready
+    // Populate list of event types for filtering by type
+    eventTypes = Array.from(
+      new Set(
+        events.map((event) => event["disciplineName"])
+      )
+    );
+  }
 
   return (
     <>
-      <Navbar bg="light" variant="light">
-                  <Container>
-                      <NavbarBrand className="mx-auto">Schedule</NavbarBrand>
-                  </Container>
-              </Navbar>
+      <Navbar bg="light" variant="light" sticky="top">
         <Container>
-          <Stack gap={2} className="col-md-5 mx-auto">
-            { content }
-          </Stack>
+          <Button variant={showScores ? "primary" : "outline-primary"} size="sm" onClick={toggleScores}>{showScores ? "Hide" : "Show"} Scores</Button>
+          <DropdownButton size="sm" variant="outline-primary" id="event-type-filter" title="Event Filter">
+            {
+              eventTypes.map((type: string) => {
+                return <DropdownItem key={type} onClick={() => setEventTypeFilter(type)}>{type}</DropdownItem>
+              })
+            }
+          </DropdownButton>
+          <Button variant={filterUSA ? "primary" : "outline-primary"} size="sm" onClick={toggleUSA}>USA Only</Button>
         </Container>
+      </Navbar>
+      <Container>
+        <Stack gap={2} className="col-md-5 mx-auto">
+          { content }
+        </Stack>
+      </Container>
     </>
   );
 }
