@@ -91,7 +91,7 @@ export default function EventList() {
           : event["status"] == "GETTING_READY"
             ? <Badge pill bg="success" className="align-self-end">{STATUS_MAP.GETTING_READY}</Badge>
             : event["status"] == "RUNNING"
-              ? <Badge pill bg="success" className="align-self-end">{STATUS_MAP.RESCHEDULED}</Badge>
+              ? <Badge pill bg="success" className="align-self-end">{STATUS_MAP.RUNNING}</Badge>
               : event["status"] == "FINISHED"
                 ? <Badge pill bg="secondary" className="align-self-end">{STATUS_MAP.FINISHED}</Badge>
                 : event["status"] == "RESCHEDULED"
@@ -136,7 +136,7 @@ export default function EventList() {
                                   }
 
                                   return (
-                                    <ListGroupItem key={comp["order"]}>
+                                    <ListGroupItem variant="success" key={comp["order"]}>
                                       <Row>
                                         <Col>
                                           {`${comp["noc"]} - ${comp["name"]}`}
@@ -172,8 +172,33 @@ export default function EventList() {
                               : comp["results"]["mark"];
                           }
 
+                          let variant: string | undefined;
+                          if (showScores)
+                          {
+                            if (comp["results"]["winnerLoserTie"] === "W")
+                            {
+                              variant = "success";
+                            }
+                            else if (comp["results"]["winnerLoserTie"] === "L")
+                            {
+                              variant = "danger";
+                            }
+                            else if (comp["results"]["medalType"] === "ME_BRONZE")
+                            {
+                              //TODO: Bronze
+                            }
+                            else if (comp["results"]["medalType"] === "ME_SILVER")
+                            {
+                              //TODO: Silver
+                            }
+                            else if (comp["results"]["medalType"] === "ME_GOLD")
+                            {
+                              //TODO: Gold
+                            }
+                          }
+
                           return (
-                            <ListGroupItem key={comp["order"]}>
+                            <ListGroupItem variant={variant} key={comp["order"]}>
                             <Row>
                               <Col>
                                 {`${comp["noc"]} - ${comp["name"]}`}
