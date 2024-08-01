@@ -22,15 +22,22 @@ export default function EventList() {
 
   // See if id was passed in query params
   const queryParams = useSearchParams();
+  let currentDate: Date;
   let currentDateStr = queryParams.get("date");
 
   if (currentDateStr === null)
   {
-    const currentDate = new Date();
+    currentDate = new Date();
     const monthStr = currentDate.getMonth() + 1 < 10 ? `0${currentDate.getMonth() + 1}` : `${currentDate.getMonth() + 1}`;
     const dayStr = currentDate.getDate() < 10 ? `0${currentDate.getDate()}` : `${currentDate.getDate()}`;
     currentDateStr = `${currentDate.getFullYear()}-${monthStr}-${dayStr}`;
   }
+  else
+  {
+    currentDate = new Date(currentDateStr);
+  }
+
+  //TODO: Add dropdown date picker
 
   useEffect(() => {
     const updateEvents = async () => {
@@ -124,6 +131,7 @@ export default function EventList() {
                               {
                                 event["competitors"].map((comp: any) => {
                                   let score: string | null = null;
+                                  let variant: string | undefined;
 
                                   if (
                                     comp["results"] !== undefined &&
@@ -133,10 +141,34 @@ export default function EventList() {
                                     score = comp["results"]["position"] !== ""
                                       ? comp["results"]["position"]
                                       : comp["results"]["mark"];
+                                    
+                                    if (showScores)
+                                    {
+                                      if (comp["results"]["medalType"] === "ME_BRONZE")
+                                      {
+                                        variant = "bronze";
+                                      }
+                                      else if (comp["results"]["medalType"] === "ME_SILVER")
+                                      {
+                                        variant = "silver";
+                                      }
+                                      else if (comp["results"]["medalType"] === "ME_GOLD")
+                                      {
+                                        variant = "gold";
+                                      }
+                                      else if (comp["results"]["winnerLoserTie"] === "W")
+                                      {
+                                        variant = "success";
+                                      }
+                                      else if (comp["results"]["winnerLoserTie"] === "L")
+                                      {
+                                        variant = "danger";
+                                      }
+                                    }
                                   }
 
                                   return (
-                                    <ListGroupItem variant="success" key={comp["order"]}>
+                                    <ListGroupItem variant={variant} key={comp["order"]}>
                                       <Row>
                                         <Col>
                                           {`${comp["noc"]} - ${comp["name"]}`}
@@ -161,6 +193,7 @@ export default function EventList() {
                       {
                         event["competitors"].map((comp: any) => {
                           let score: string | null = null;
+                          let variant: string | undefined;
 
                           if (
                             comp["results"] !== undefined &&
@@ -170,30 +203,29 @@ export default function EventList() {
                             score = comp["results"]["position"] !== ""
                               ? comp["results"]["position"]
                               : comp["results"]["mark"];
-                          }
-
-                          let variant: string | undefined;
-                          if (showScores)
-                          {
-                            if (comp["results"]["winnerLoserTie"] === "W")
+                            
+                            if (showScores)
                             {
-                              variant = "success";
-                            }
-                            else if (comp["results"]["winnerLoserTie"] === "L")
-                            {
-                              variant = "danger";
-                            }
-                            else if (comp["results"]["medalType"] === "ME_BRONZE")
-                            {
-                              //TODO: Bronze
-                            }
-                            else if (comp["results"]["medalType"] === "ME_SILVER")
-                            {
-                              //TODO: Silver
-                            }
-                            else if (comp["results"]["medalType"] === "ME_GOLD")
-                            {
-                              //TODO: Gold
+                              if (comp["results"]["medalType"] === "ME_BRONZE")
+                              {
+                                variant = "bronze";
+                              }
+                              else if (comp["results"]["medalType"] === "ME_SILVER")
+                              {
+                                variant = "silver";
+                              }
+                              else if (comp["results"]["medalType"] === "ME_GOLD")
+                              {
+                                variant = "gold";
+                              }
+                              else if (comp["results"]["winnerLoserTie"] === "W")
+                              {
+                                variant = "success";
+                              }
+                              else if (comp["results"]["winnerLoserTie"] === "L")
+                              {
+                                variant = "danger";
+                              }
                             }
                           }
 
@@ -242,6 +274,21 @@ export default function EventList() {
 
   return (
     <>
+      <style type="text/css">
+        {`
+          .list-group-item-gold {
+            background-color: gold;
+          }
+
+          .list-group-item-silver {
+            background-color: silver;
+          }
+
+          .list-group-item-bronze {
+            background-color: #CD7F32;
+          }
+        `}
+      </style>
       <Navbar bg="light" variant="light" sticky="top">
         <Container>
           <Button variant={showScores ? "primary" : "outline-primary"} size="sm" onClick={toggleScores}>{showScores ? "Hide" : "Show"} Scores</Button>
@@ -261,7 +308,7 @@ export default function EventList() {
                 {
                   eventTypeFilter !== ""
                   ? <>
-                      <DropdownItem onClick={() => setEventTypeFilter('')}>Clear Filter</DropdownItem>
+                      <DropdownItem key="clear" onClick={() => setEventTypeFilter('')}>Clear Filter</DropdownItem>
                       <DropdownDivider />
                     </>
                   : null
@@ -289,7 +336,7 @@ export default function EventList() {
                 {
                   countryFilter !== ""
                   ? <>
-                      <DropdownItem onClick={() => setCountryFilter('')}>Clear Filter</DropdownItem>
+                      <DropdownItem key="clear" onClick={() => setCountryFilter('')}>Clear Filter</DropdownItem>
                       <DropdownDivider />
                     </>
                   : null
